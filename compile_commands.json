@@ -1,0 +1,7 @@
+[
+    {
+        "directory": "$HOME/dev/engine",
+        "command": "gcc -I. -Iengine -std=c23 -Wall -Wextra -c engine/dummy.c",
+        "file": "sandbox/main.c"
+    }
+]
