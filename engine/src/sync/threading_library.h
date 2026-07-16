@@ -6,6 +6,8 @@
 #include "internal/internal_types.h"
 #include "internal/atomic_ops.h"
 #include "internal/cpu_affinity.h"
+#include "internal/cleanup_frame.h"
+#include "internal/process_id.h"
 
 #include "set_jump/set_jump.h"
 
@@ -484,6 +486,38 @@ integer_32bit engine_thread_cancel (engine_thread_id thread);
    This function is a cancellation point and must not be marked with 'ENGINE_THROW' */
 void engine_thread_testcancel (void);
 
+
+/* Functions for handling cleanup frames */
+
+/* Push a cleanup handler onto the calling thread's cleanup stack. 
+   'routine' will be invoked with 'arg' when the matching
+   'engine_cleanup_pop' is called with non-zero 'execute', or when
+   the thread is canceled, or when 'engine_thread_exit' runs.
+   
+   This is a cancellation point, therefore this function is not
+   marked with 'ENGINE_THROW' */
+void engine_cleanup_push (void (*routine)(void *), void *arg) ENGINE_NONNULL(1);
+
+/* Pop a cleanup handler installed by matching 'engine_cleanup_push'.
+   If 'execute' is non-zero, the handler is invoked before popping */
+void engine_cleanup_pop (integer_32bit execute);
+
+/* Like 'engine_cleanup_push', but additionally forces deferred
+   cancellation type for the guarded scope, saving the previous
+   type in the frame for 'engine_cleanup_pop_restore_np' to
+   restore */
+void engine_cleanup_push_defer_np (void (*routine)(void *), void *arg) ENGINE_NONNULL(1);
+
+/* Counterpart to 'engine_cleanup_push_defer_np': restores the
+   cancellation type saved at push time, then behaves as
+   'engine_cleanup_pop' */
+void engine_cleanup_pop_restore_np (integer_32bit execute);
+
+/* Execute all cleanup handlers currently on the calling thread's
+   cleanup stack, in LIFO order. Used internally during cancellation
+   and 'engine_thread_exit'; rarely called directly by user code */
+void engine_cleanup_run_all (void);
+
 #ifdef __cplusplus
 
 /* RAII guard equivalent to glibc's '__pthread_cleanup_class', but with
@@ -892,4 +926,42 @@ integer_32bit engine_thread_key_setspecific (
     engine_thread_key *key,
     const void *pointer
 ) ENGINE_THROW ENGINE_ATTR_ACCESS_NONE(2);
+
+
+#if ENGINE_HAS_PTHREADS || ENGINE_PLATFORM_WINDOWS
+
+/* Get the ID of the CPU-time clock for thread 'thread_id' '*/
+integer_32bit engine_thread_getcpuclockid (
+    engine_thread_id thread_id,
+    engine_clockid *clock_id
+) ENGINE_THROW ENGINE_NONNULL(2);
+
+#endif
+
+#if ENGINE_HAS_GETTID
+engine_process_id engine_thread_gettid_np (engine_thread_id thread_id);
+#endif
+
+/* Install handlers to be called when a new process is created with
+   'fork()'. 'prepare' runs in the parent just before forking, 'parent'
+   runs in the parent just after, 'child' runs in the child. Each
+   handler may individually be NULL. Multiple registrations run
+   'prepare' in LIFO order, 'parent'/'child' in FIFO order */
+#if ENGINE_HAS_FORK
+
+integer_32bit engine_thread_atfork (
+    void (*prepare)(void),
+    void (*parent)(void),
+    void (*child)(void)
+) ENGINE_THROW;
+
+#endif
+
+/* Fast-path equality check */
+static inline integer_32bit engine_threads_equal_inline (
+    engine_thread_id thread1,
+    engine_thread_id thread2
+) {
+    return thread1 == thread2;
+}
 

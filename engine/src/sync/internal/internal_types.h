@@ -92,11 +92,20 @@ typedef struct engine_semaphore_internal_s {
     integer_32bit  pad;         // alignment / future use
 } engine_semaphore_internal;
 
+
+#if defined(__cplusplus)
+static_assert(sizeof(sem_t) >= sizeof(engine_semaphore_internal), 
+               "sem_t must be large enough");
+
+static_assert(ENGINE_ALIGNOF(sem_t) >= ENGINE_ALIGNOF(engine_semaphore_internal),
+               "sem_t must be aligned enough");
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 _Static_assert(sizeof(sem_t) >= sizeof(engine_semaphore_internal), 
                "sem_t must be large enough");
 
 _Static_assert(ENGINE_ALIGNOF(sem_t) >= ENGINE_ALIGNOF(engine_semaphore_internal),
                "sem_t must be aligned enough");
+#endif
 
 /* Rwlock internal flag check */
 #define THREAD_RWLOCK_RECURSIVE(rwlock)     \

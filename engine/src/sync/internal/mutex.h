@@ -17,7 +17,7 @@ typedef struct engine_internal_mutex_slist_s {
 
 /* Mutex internal representation (engine ABI) */
 typedef struct engine_mutex_s {
-    integer_32bit lock align(ENGINE_LOCK_ALIGNMENT);
+    integer_32bit lock ENGINE_ALIGN(ENGINE_LOCK_ALIGNMENT);
     integer_32bit_unsigned count;
     integer_32bit owner;
 

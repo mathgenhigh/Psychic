@@ -1,7 +1,8 @@
 #pragma once
 
-#include "../platform/platform_features.h"
-#include "../core/numbers.h"
+#include "platform/platform_features.h"
+#include "core/numbers.h"
+#include "core/defines.h"
 
 /* Fences */
 #define ENGINE_ATOMIC_FULL_BARRIER      __atomic_thread_fence(__ATOMIC_SEQ_CST)
@@ -18,10 +19,9 @@
 #endif
 
 /* Lock-free check */
-#define ENGINE_ATOMIC_CHECK_SIZE(mem)                                   \
-    _Static_assert(__atomic_always_lock_free(sizeof(*(mem)), 0,         \
-                   "atomic not lock free!"))
-
+#define ENGINE_ATOMIC_CHECK_SIZE(mem) \
+    _Static_assert(__atomic_always_lock_free(sizeof(*(mem)), (mem)), \
+                   "atomic not lock free!")
 /* Core operations */
 
 #define engine_atomic_load_relaxed(mem)             \
@@ -59,19 +59,28 @@
 #define engine_atomic_fetch_or_relaxed(mem, operand)        \
     __atomic_fetch_or((mem), (operand), __ATOMIC_RELAXED)
 
+#define engine_atomic_exchange_relaxed(mem, val)            \
+    __atomic_exchange_n((mem), (val), __ATOMIC_RELAXED)
+
+#define engine_atomic_exchange_acquire(mem, val)            \
+    __atomic_exchange_n((mem), (val), __ATOMIC_ACQUIRE)
+
+    #define engine_atomic_exchange_release(mem, val)        \
+    __atomic_exchange_n((mem), (val), __ATOMIC_RELEASE)
+
 /* Atomic max */
 #define ENGINE_ATOMIC_MAX(ptr, val)                                                 \
     do {                                                                            \
-        integer_64bit old = __atomic_load_n((ptr), __ATOMIC_RELAXED);               \
+        ENGINE_TYPEOF(*(ptr)) old = __atomic_load_n((ptr), __ATOMIC_RELAXED);       \
         while (old < (val) &&                                                       \
-                !__atomic_compare_exchange_n((ptr), &old, (val), 0,                 \
+            !__atomic_compare_exchange_n((ptr), &old, (val), 0,                     \
                                             __ATOMIC_SEQ_CST, __ATOMIC_RELAXED));   \
     } while (0)
 
 /* Decrement if positive */
 #define engine_atomic_decrement_if_positive(mem)                                    \
     ({                                                                              \
-        typeof(*(mem))old;                                                          \
+        ENGINE_TYPEOF(*(mem))old;                                                   \
         do {                                                                        \
             old = __atomic_load_n((mem), __ATOMIC_RELAXED);                         \
             if (old <= 0)                                                           \

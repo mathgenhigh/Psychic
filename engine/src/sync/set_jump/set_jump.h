@@ -7,15 +7,15 @@
 typedef jump_buf_tag jump_buf[1];
 
 /* Jump functions declarations */
-integer_32bit engine_setjump (jump_buf env) thrownl;
-integer_32bit _engine_setjump (jump_buf env) thrownl;
+integer_32bit engine_setjump (jump_buf env) ENGINE_THROWNL;
+integer_32bit _engine_setjump (jump_buf env) ENGINE_THROWNL;
 
-void engine_longjump (jump_buf env, integer_32bit val) thrownl;
-void _engine_longjump (jump_buf env, integer_32bit val) thrownl;
+void engine_longjump (jump_buf env, integer_32bit val) ENGINE_THROWNL;
+void _engine_longjump (jump_buf env, integer_32bit val) ENGINE_THROWNL;
 
 /* POSIX versions */
-integer_32bit engine_signal_setjump (jump_buf_tag env[1], integer_32bit savemask) thrownl;
-void engine_signal_longjump (jump_buf_tag env[1], integer_32bit val) thrownl;
+integer_32bit engine_signal_setjump (jump_buf_tag env[1], integer_32bit savemask) ENGINE_THROWNL;
+void engine_signal_longjump (jump_buf_tag env[1], integer_32bit val) ENGINE_THROWNL;
 
 /* Public API macros */
 #define setjump(env)    engine_setjump(env)

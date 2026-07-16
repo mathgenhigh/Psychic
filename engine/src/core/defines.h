@@ -115,3 +115,20 @@
 #   define ENGINE_ATTR_ACCESS_READ_WRITE(...)
 #endif
 
+#if defined(__cplusplus) && __cplusplus >= 201103L
+#   define ENGINE_THREAD_LOCAL   thread_local
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#   define ENGINE_THREAD_LOCAL   _Thread_local
+#elif ENGINE_COMPILER_GCC_FAMILY
+#   define ENGINE_THREAD_LOCAL  __thread
+#elif ENGINE_COMPILER_MSVC
+#   define ENGINE_THREAD_LOCAL  __declspec(thread)
+#else 
+#   error "No thread-local storage mechanism available for this compiler"
+#endif
+
+#if defined(__cplusplus) && __cplusplus >= 201103L
+#   define ENGINE_NULLPTR   nullptr
+#else
+#   define ENGINE_NULLPTR   ((void *)0)
+#endif

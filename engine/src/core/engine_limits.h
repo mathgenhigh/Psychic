@@ -62,3 +62,13 @@
 #   define ENGINE_INTPTR_MAX    ENGINE_INT32_MAX
 #   define ENGINE_UINTPTR_MAX   ENGINE_UINT32_MAX
 #endif
+
+#if defined(__cplusplus)
+static_assert(sizeof(void *) == (ENGINE_WORDSIZE / 8),
+              "ENGINE_WORDSIZE disagrees with actual sizeof(void *) - "
+              "current architecture is not supported");
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(sizeof(void *) == (ENGINE_WORDSIZE / 8),
+              "ENGINE_WORDSIZE disagrees with actual sizeof(void *) - "
+              "current architecture is not supported");
+#endif
