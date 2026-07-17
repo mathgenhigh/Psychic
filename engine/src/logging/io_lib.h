@@ -189,7 +189,7 @@ integer_32bit engine_file_printf (engine_file *stream, const integer_8bit *forma
 integer_32bit engine_snprintf (integer_8bit *s, engine_size_t max_len, const integer_8bit *format, ...) ENGINE_NONNULL(1, 3);
 
 
-/* Formatted output */
+/* Formatted input */
 
 integer_32bit engine_file_scanf (engine_file *stream, const integer_8bit *format, ...) ENGINE_NONNULL(1, 2);
 integer_32bit engine_sscanf (const integer_8bit *s, const integer_8bit *format, ...) ENGINE_THROW ENGINE_NONNULL(1, 2);
