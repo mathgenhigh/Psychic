@@ -27,7 +27,7 @@ typedef struct format_spec_s {
    padding. This single helper is what every conversion below reduces 
    to - the actual "printf" logic is just: produce the digits/chars,
    then pad */
-static void emit_padded (
+static engine_size_t emit_padded (
     engine_format_sink sink,
     void *ctx,
     const integer_8bit *text,
@@ -49,10 +49,12 @@ static void emit_padded (
     if (spec->left)
         for (integer_32bit i = 0; i < pad; ++i)
             sink(ctx, ' ');
+
+    return (engine_size_t)pad + len;
 }
 
 
-static void format_signed (
+static engine_size_t format_signed (
     engine_format_sink sink,
     void *ctx,
     integer_64bit_signed val,
@@ -99,11 +101,11 @@ static void format_signed (
     if (spec->zero)
         spec_no_zero_pad.width = 0;     // already handled above
     
-    emit_padded(sink, ctx, full, pos, spec->zero ? &spec_no_zero_pad : spec, ' ');
+    return emit_padded(sink, ctx, full, pos, spec->zero ? &spec_no_zero_pad : spec, ' ');
 }
 
 
-static void format_unsigned (
+static engine_size_t format_unsigned (
     engine_format_sink sink,
     void *ctx,
     integer_64bit_unsigned val,
@@ -125,7 +127,7 @@ static void format_unsigned (
         val /= base;
     } while (val > 0);
 
-    emit_padded(
+    return emit_padded(
         sink, ctx, &buf[i + 1], 
         engine_strlen(&buf[i + 1]), spec, 
         spec->zero && !spec->left ? '0' : ' '
@@ -133,7 +135,7 @@ static void format_unsigned (
 }
 
 
-static void format_string (
+static engine_size_t format_string (
     engine_format_sink sink,
     void *ctx,
     const integer_8bit *s,
@@ -147,7 +149,7 @@ static void format_string (
     if (spec->precision >= 0 && (engine_size_t)spec->precision < len)
         len = spec->precision;
 
-    emit_padded(sink, ctx, s, len, spec, ' ');
+    return emit_padded(sink, ctx, s, len, spec, ' ');
 }
 
 
@@ -156,7 +158,7 @@ static void format_string (
    is itself a substantial, separate numerial-algorithms project.
    This engine reuses the platform C library's already-correct 
    implementation rather than risking a subtly-wrong reimplementation */
-static void format_float (
+static engine_size_t format_float (
     engine_format_sink sink,
     void *ctx,
     floating_point_64bit val,
@@ -169,11 +171,13 @@ static void format_float (
 
     integer_32bit n = engine_snprintf(buf, sizeof(buf), fmt, val);
     if (n > 0)
-        emit_padded(
+        return emit_padded(
             sink, ctx, buf, 
             (engine_size_t)n, spec, 
             spec->zero && !spec->left ? '0' : ' '
         );
+    
+    return 0;
 }
 
 
@@ -288,7 +292,7 @@ integer_64bit_signed engine_vformat_core (
                     ? va_arg(ap, integer_64bit_signed)
                     : (spec.length == LEN_L) ? (integer_64bit_signed)va_arg(ap, long)
                     : va_arg(ap, integer_32bit);
-                format_signed(sink, ctx, val, &spec);
+                written += format_signed(sink, ctx, val, &spec);
                 break;
             }
             case 'u': case 'o': case 'x': case 'X': {
@@ -297,7 +301,7 @@ integer_64bit_signed engine_vformat_core (
                     : (spec.length == LEN_L) ? (integer_64bit_unsigned)va_arg(ap, unsigned long)
                     : va_arg(ap, integer_32bit_unsigned);
                 integer_32bit base = (spec.conv == 'o') ? 8 : (spec.conv == 'u') ? 10 : 16;
-                format_unsigned(sink, ctx, val, base, spec.conv == 'X', &spec);
+                written += format_unsigned(sink, ctx, val, base, spec.conv == 'X', &spec);
                 break;
             }
             case 'c':
@@ -306,20 +310,21 @@ integer_64bit_signed engine_vformat_core (
                 written++;
                 break;
             case 's':
-                format_string(sink, ctx, va_arg(ap, const integer_8bit *), &spec);
+                written += format_string(sink, ctx, va_arg(ap, const integer_8bit *), &spec);
                 break;
             case 'p': {
                 spec.hash = true;
-                format_unsigned(sink, ctx, (integer_64bit_unsigned)(integer_pointer_unsigned)va_arg(ap, void *), 16, false, &spec);
+                written += format_unsigned(sink, ctx, (integer_64bit_unsigned)(integer_pointer_unsigned)va_arg(ap, void *), 16, false, &spec);
                 break;
             }
             case 'f': case 'e': case 'E': case 'g': case 'G':
-                format_float(sink, ctx, va_arg(ap, floating_point_64bit), &spec);
+                written += format_float(sink, ctx, va_arg(ap, floating_point_64bit), &spec);
                 break;
             default:
                 /* Unknown conversion */
                 sink(ctx, '%');
                 sink(ctx, spec.conv);
+                written += 2;
                 break;
         }
     }
