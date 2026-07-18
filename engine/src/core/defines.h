@@ -132,3 +132,34 @@
 #else
 #   define ENGINE_NULLPTR   ((void *)0)
 #endif
+
+/* Allocation attributes */
+#if ENGINE_COMPILER_GCC_FAMILY
+#   define ENGINE_MALLOC_FN         __attribute__((__malloc__))
+#   define ENGINE_ALLOC_SIZE(...)   __attribute__((__alloc_size__(__VA_ARGS__)))
+#   define ENGINE_ALLOC_ALIGN(n)    __attribute__((__alloc_align__(n)))
+#elif ENGINE_COMPILER_MSVC
+#   define ENGINE_MALLOC_FN         __declspec(restrict)
+#   define ENGINE_ALLOC_SIZE(...)
+#   define ENGINE_ALLOC_ALIGN(n)
+#else 
+#   define ENGINE_ALLOC_FN
+#   define ENGINE_ALLOC_SIZE(...)
+#   define ENGINE_ALLOC_ALIGN(n)
+#endif
+
+/* "Don't ignore this return value" - genuinely important for allocators,
+    since discarding the result of 'engine_malloc' is either a pointless
+    call or (for 'engine_realloc') a guaranteed leak of the original block
+    if reallocation moved it */
+#if defined(__cplusplus) && __cplusplus >= 201703L
+#   define ENGINE_NODISCARD     [[nodiscard]]
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
+#   define ENGINE_NODISCARD     [[nodiscard]]
+#elif ENGINE_COMPILER_GCC_FAMILY
+#   define ENGINE_NODISCARD     __attribute__((__warn_unused_result__))
+#elif ENGINE_COMPILER_MSVC
+#   define ENGINE_NODISCARD     _Check_return_
+#else
+#   define ENGINE_NODISCARD
+#endif
